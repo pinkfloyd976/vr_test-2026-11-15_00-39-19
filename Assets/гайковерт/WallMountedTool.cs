@@ -43,6 +43,10 @@ public class WallMountedTool : MonoBehaviour
     [Min(0f)] public float highlightDistance = 0.4f;
     [Tooltip("Какие рендереры обводить. Пусто = все MeshRenderer внутри гайковерта.")]
     public Renderer[] outlineRenderers;
+    [Tooltip("Мелкие детали (их самый большой размер меньше этого значения, м) не обводятся — иначе они раздуваются в пятна.")]
+    [Min(0f)] public float minOutlinePartSize = 0.03f;
+    [Tooltip("Максимальное увеличение копии-контура по любой оси.")]
+    [Min(1f)] public float maxOutlineScale = 1.6f;
 
     [Header("Диагностика")]
     [SerializeField] ToolState state = ToolState.Docked;
@@ -262,11 +266,14 @@ public class WallMountedTool : MonoBehaviour
             Mesh mesh = filter.sharedMesh;
             Bounds b = mesh.bounds;
             Vector3 lossy = r.transform.lossyScale;
+            float maxPartSize = Mathf.Max(Mathf.Abs(b.size.x * lossy.x),
+                Mathf.Max(Mathf.Abs(b.size.y * lossy.y), Mathf.Abs(b.size.z * lossy.z)));
+            if (maxPartSize < minOutlinePartSize) continue;
             Vector3 scale = Vector3.one;
             for (int axis = 0; axis < 3; axis++)
             {
                 float size = Mathf.Abs(b.size[axis] * lossy[axis]);
-                scale[axis] = size > 0.00001f ? 1f + 2f * outlineWidth / size : 1f;
+                scale[axis] = size > 0.00001f ? Mathf.Min(1f + 2f * outlineWidth / size, maxOutlineScale) : 1f;
             }
 
             var shell = new GameObject(ShellName);
